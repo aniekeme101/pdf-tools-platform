@@ -334,13 +334,15 @@ tests/
 
 Test files should be intentionally selected, safely licensed, and small enough for contributors to use. Large or sensitive fixtures should not be committed.
 
-## 9. Open-source commitment
+## 9. Open-source commitment and licence
 
-The project is intended to be free and open source. The aim is to make the code available for learning, inspection, collaboration, and improvement while keeping the core utilities accessible.
+This repository is licensed under the **MIT License**. The complete licence terms are available in the [LICENSE](./LICENSE) file in the repository root.
 
-A formal open-source licence should be included in the repository before the project is represented as having a specific set of reuse permissions. Until a licence file is added, all rights not expressly granted remain reserved by the copyright holder.
+The MIT License permits use, copying, modification, merging, publishing, distribution, sublicensing, and sale of copies of the software, subject to retaining the copyright and permission notice. The software is provided "as is", without warranty. See the LICENSE file for the complete legal terms.
 
-Contributors should review the repository's licence and contribution guidance before reusing or submitting code.
+The project is intended to remain free and open source, making the code available for learning, inspection, collaboration, and improvement while keeping the core utilities accessible.
+
+Contributors and users should review the complete licence before reusing or submitting code.
 
 ## 10. Donations and education mission
 
