@@ -308,6 +308,7 @@ export default function DashboardPage() {
               </div>
 
               <div className="ml-auto flex items-center gap-3">
+                <a href="/donate" className="hidden rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-blue-200 hover:text-blue-700 md:inline-flex">Support the project</a>
                 <a
                   href="/"
                   className="hidden rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-blue-200 hover:text-blue-700 sm:inline-flex"
