@@ -5,19 +5,30 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
-type Row = Record<string, any>;
+type Donation = { status: string; amount_minor: number; currency: string; paid_at: string | null };
+type DonorProfile = { email: string | null; donations?: Donation[] };
+type DonorRow = {
+  id: string; display_name: string | null; organisation_name: string | null; website_url: string | null;
+  consent_to_public_display: boolean; review_status: string; rejection_reason: string | null;
+  donors: DonorProfile | DonorProfile[] | null;
+};
+type SponsorRow = {
+  id: string; organisation_name: string; legal_name: string | null; website_url: string | null;
+  contact_name: string | null; contact_email: string | null; description: string | null;
+  status: string; public_display_consent: boolean; rejection_reason: string | null;
+};
 
 export default function SupporterAdminPage() {
   const router = useRouter();
-  const [donors, setDonors] = useState<Row[]>([]);
-  const [sponsors, setSponsors] = useState<Row[]>([]);
+  const [donors, setDonors] = useState<DonorRow[]>([]);
+  const [sponsors, setSponsors] = useState<SponsorRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [reasons, setReasons] = useState<Record<string, string>>({});
 
-  const invoke = useCallback(async (action: string, extra: Row = {}) => {
+  const invoke = useCallback(async (action: string, extra: Record<string, unknown> = {}) => {
     const supabase = createClient();
     const { data: auth } = await supabase.auth.getUser();
     if (!auth.user) { router.replace("/login"); throw new Error("Please sign in again."); }
@@ -31,15 +42,15 @@ export default function SupporterAdminPage() {
     setLoading(true); setError("");
     try {
       const [d, s] = await Promise.all([invoke("admin_list_donors"), invoke("admin_list_sponsors")]);
-      setDonors(Array.isArray(d.data) ? d.data : []);
-      setSponsors(Array.isArray(s.data) ? s.data : []);
+      setDonors(Array.isArray(d.data) ? d.data as DonorRow[] : []);
+      setSponsors(Array.isArray(s.data) ? s.data as SponsorRow[] : []);
     } catch (e) { setError(e instanceof Error ? e.message : "Unable to load moderation queues."); }
     finally { setLoading(false); }
   }, [invoke]);
 
   useEffect(() => { void load(); }, [load]);
 
-  async function act(key: string, action: string, payload: Row) {
+  async function act(key: string, action: string, payload: Record<string, unknown>) {
     setBusy(key); setError(""); setNotice("");
     try { const result = await invoke(action, payload); setNotice(result?.message || "Action completed."); await load(); }
     catch (e) { setError(e instanceof Error ? e.message : "The action could not be completed."); }
@@ -64,8 +75,7 @@ export default function SupporterAdminPage() {
                 {donors.map(row => {
                   const donor = Array.isArray(row.donors) ? row.donors[0] : row.donors;
                   const payments = donor?.donations || [];
-                  const paid = payments.filter((p: Row) => p.status === "succeeded");
-                  const hasPublicPaid = paid.length > 0;
+                  const paid = payments.filter(p => p.status === "succeeded");
                   return <article key={row.id} className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
                     <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="font-semibold">{row.display_name || row.organisation_name || "Unnamed supporter"}</h2><p className="mt-1 text-xs text-gray-500">{donor?.email || "No email"}</p></div><span className="rounded-full bg-gray-100 px-3 py-1 text-xs">{row.review_status}</span></div>
                     {row.organisation_name && <p className="mt-2 text-sm">{row.organisation_name}</p>}
@@ -73,9 +83,10 @@ export default function SupporterAdminPage() {
                     <p className="mt-3 text-xs text-gray-600">Public consent: {row.consent_to_public_display ? "Yes" : "No"} · Successful donations: {paid.length}</p>
                     <div className="mt-4 flex flex-wrap gap-2">
                       <button disabled={!!busy} onClick={() => act(row.id, "admin_review_donor", { recognition_id: row.id, status: "approved", publish: false })} className="rounded-lg border border-gray-300 px-3 py-2 text-sm hover:bg-gray-50 disabled:opacity-50">Approve privately</button>
-                      <button disabled={!!busy || !row.consent_to_public_display || !hasPublicPaid} onClick={() => act(row.id, "admin_review_donor", { recognition_id: row.id, status: "approved", publish: true })} className="rounded-lg bg-blue-700 px-3 py-2 text-sm text-white hover:bg-blue-800 disabled:opacity-40">Approve & publish</button>
+                      <button disabled={!!busy || !row.consent_to_public_display || !paid.length} onClick={() => act(row.id, "admin_review_donor", { recognition_id: row.id, status: "approved", publish: true })} className="rounded-lg bg-blue-700 px-3 py-2 text-sm text-white hover:bg-blue-800 disabled:opacity-40">Approve & publish</button>
                     </div>
                     <div className="mt-4 flex gap-2"><input aria-label="Donor rejection reason" value={reasons[row.id] || ""} onChange={e => setReasons(v => ({ ...v, [row.id]: e.target.value }))} placeholder="Reason if rejecting" className="min-w-0 flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm" /><button disabled={!!busy || (reasons[row.id] || "").trim().length < 3} onClick={() => act(row.id, "admin_review_donor", { recognition_id: row.id, status: "rejected", rejection_reason: reasons[row.id] })} className="rounded-lg border border-red-300 px-3 py-2 text-sm text-red-700 disabled:opacity-40">Reject</button></div>
+                    {row.rejection_reason && <p className="mt-2 text-xs text-red-700">Previous reason: {row.rejection_reason}</p>}
                   </article>;
                 })}
               </div>}
@@ -95,6 +106,7 @@ export default function SupporterAdminPage() {
                     <button disabled={!!busy || (reasons[row.id] || "").trim().length < 3} onClick={() => act(row.id, "admin_review_sponsor", { sponsor_id: row.id, status: "rejected", rejection_reason: reasons[row.id] })} className="rounded-lg border border-red-300 px-3 py-2 text-sm text-red-700 disabled:opacity-40">Reject</button>
                   </div>
                   <input aria-label="Sponsor rejection reason" value={reasons[row.id] || ""} onChange={e => setReasons(v => ({ ...v, [row.id]: e.target.value }))} placeholder="Reason if rejecting" className="mt-3 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" />
+                  {row.rejection_reason && <p className="mt-2 text-xs text-red-700">Previous reason: {row.rejection_reason}</p>}
                 </article>)}
               </div>}
             </section>
