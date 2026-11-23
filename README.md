@@ -357,7 +357,7 @@ Potential areas of support may include:
 
 Donations are intended to be **optional**. Users should be able to access the free utilities without donating.
 
-The donation system is planned, not yet represented as an active fundraising or distribution programme. As it is developed, the project intends to communicate how contributions are received, allocated, and reported. Payment processing and any future public reporting will be designed with appropriate privacy and security safeguards.
+The database foundation, donor recognition preferences, sponsor application, public thank-you page, and administrator moderation interface are now implemented. Online payment checkout and the education-support distribution programme are not yet operational. As the programme develops, the project intends to communicate how contributions are received, allocated, and reported, with appropriate privacy and security safeguards.
 
 ## 11. Contributing
 
