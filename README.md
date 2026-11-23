@@ -421,3 +421,31 @@ The project will evolve as these limitations are addressed. Please check the rep
 PaperFlow is the first step in a broader effort to build a useful, free, and open-source multi-utility platform. The ambition is not only to make everyday digital tasks easier, but also to develop a sustainable project whose community support can contribute to better educational opportunities for children who need them most.
 
 Thank you for taking the time to explore the project, test it, report issues, and help it improve.
+
+## 16. Supporter programme implementation status
+
+The voluntary supporter programme now has an initial database and application foundation. This is not yet a live payment or fundraising system.
+
+### Implemented foundation
+
+- Separate donor and sponsor records and workflows; sponsorship is not treated as an ordinary donation.
+- Guest donor support is represented in the database model so a future checkout does not require an application account.
+- Donors can choose private or public recognition. Public recognition requires explicit consent, moderation approval, and at least one successful donation recorded with public recognition selected.
+- Sponsor applications can be submitted independently and remain pending until reviewed.
+- Protected administrator registry and moderation audit log.
+- Row Level Security and server-only access for private supporter and payment records.
+- Private Supabase Storage bucket named `recognition-assets` for future donor and sponsor logo assets.
+- Supabase Edge Function `supporter-workflows` handles supporter-board retrieval, sponsor applications, donor recognition preferences, and administrator moderation.
+- Application routes: `/donate`, `/donor-recognition`, `/sponsor-application`, `/thank-you`, and `/admin/supporters`.
+
+### Important limitations
+
+- Online donation checkout is not active. No payment provider has been confirmed or integrated.
+- Payment initialization, server-side payment verification, recurring billing, refunds, and webhook reconciliation remain outstanding.
+- Logo upload and validation are not yet available in the application.
+- Sponsor approval and donor recognition moderation are implemented as separate queues. Sponsor placements and public activation still require additional workflow and testing.
+- The optional download-time donation prompt has not been implemented.
+- Public recognition should not be treated as evidence of payment unless the verified donation record exists.
+- The supporter programme must be tested with controlled test records before public launch.
+
+All PDF utilities remain free regardless of whether a visitor donates, becomes a sponsor, or creates an account. Donor and sponsor recognition does not unlock paid or preferential features.
