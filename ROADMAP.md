@@ -94,21 +94,41 @@ Further work:
 
 The test catalogue in the README is a proposed test plan. Its identifiers are not evidence that all cases have been executed or passed. Test fixtures should be synthetic or appropriately licensed and must not contain private or confidential information.
 
-## 5. Donation system and education-support mission
+## 5. Donation, donor recognition, sponsorship, and education-support mission
 
-**Status: Planned**
+**Status: In progress — database foundation and initial application workflows implemented; payment checkout not active**
 
-The project intends to support an optional donation system. Donations will not be a requirement for using the free utilities.
+The project intends to support an optional donation system. Donations will not be a requirement for using the free utilities. Donors and sponsors are separate categories with separate records, review processes, and public recognition controls.
 
-- [ ] Design the donation experience and explain the intended social-impact mission.
-- [ ] Support one-time contributions.
-- [ ] Support monthly recurring contributions.
-- [ ] Integrate Paystack using server-side payment verification.
-- [ ] Verify webhook signatures and make payment-event processing idempotent.
-- [ ] Keep donor identities and messages private; do not create a public donor wall.
-- [ ] Allow a donation without requiring the donor to create an application account, subject to the final payment design.
-- [ ] Provide appropriate private records and administrative reconciliation.
-- [ ] Establish transparent reporting on funds received and education-support activities as the programme becomes operational.
+Implemented:
+- [x] Create provider-neutral donor, donation, subscription, payment transaction, and webhook event tables.
+- [x] Support guest donor records without requiring an application account.
+- [x] Keep sponsors separate from ordinary donors, with separate sponsorship records and placements.
+- [x] Record donor private/public recognition preference and consent.
+- [x] Require moderation approval and a successful public-recognition donation before donor display.
+- [x] Create separate public donor and sponsor board data sources with limited fields.
+- [x] Protect private supporter and payment tables with RLS and server-side-only access.
+- [x] Create a private recognition asset storage bucket for future logos.
+- [x] Build the donation information and supporter-benefits page.
+- [x] Build the sponsor application page.
+- [x] Build the donor recognition preference page for signed-in users.
+- [x] Build the public thank-you page with separate sponsor and donor sections.
+- [x] Register the initial super administrator and create the restricted supporter moderation dashboard.
+- [x] Add a protected audit log for moderation actions.
+
+Remaining:
+- [ ] Decide and confirm the first payment provider. Paystack has been suggested but is not yet confirmed.
+- [ ] Implement one-time donation checkout.
+- [ ] Implement monthly recurring contributions and subscription lifecycle handling.
+- [ ] Verify payments server-side; verify webhook signatures and make event processing idempotent.
+- [ ] Add secure guest checkout and link guest donations to optional accounts only when appropriate.
+- [ ] Implement refunds, reconciliation, receipts, and donor communication.
+- [ ] Build secure logo upload, MIME/type/size validation, and moderation of donor/sponsor assets.
+- [ ] Complete sponsor placement creation, activation, scheduling, and unpublishing controls.
+- [ ] Add donor preference editing/revocation and ensure public listings are removed promptly when consent is withdrawn.
+- [ ] Add rate limiting and abuse protection to public submission endpoints.
+- [ ] Add the optional download-time donation prompt with a clear skip/continue choice and frequency limits.
+- [ ] Establish transparent reporting on funds received and education-support activities before the programme becomes operational.
 
 **Intended impact:** Voluntary donations are intended to help support education and improve schooling conditions for less privileged children in poor and underserved communities around the world. Potential areas include learning materials, school supplies, improved learning environments, and support for children facing barriers to school attendance.
 
