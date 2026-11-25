@@ -123,8 +123,8 @@ Remaining:
 - [ ] Verify payments server-side; verify webhook signatures and make event processing idempotent.
 - [ ] Add secure guest checkout and link guest donations to optional accounts only when appropriate.
 - [ ] Implement refunds, reconciliation, receipts, and donor communication.
-- [ ] Build secure logo upload, MIME/type/size validation, and moderation of donor/sponsor assets.
-- [ ] Complete sponsor placement creation, activation, scheduling, and unpublishing controls.
+- [x] Implement administrator sponsor-logo upload to private storage with MIME and 1 MB size validation (initial implementation; testing remains).
+- [x] Add initial sponsor placement controls for labels, sort order and activation (testing and refinement remain).
 - [ ] Add donor preference editing/revocation and ensure public listings are removed promptly when consent is withdrawn.
 - [ ] Add rate limiting and abuse protection to public submission endpoints.
 - [ ] Add the optional download-time donation prompt with a clear skip/continue choice and frequency limits.
