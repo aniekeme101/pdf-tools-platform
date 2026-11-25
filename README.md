@@ -442,7 +442,7 @@ The voluntary supporter programme now has an initial database and application fo
 
 - Online donation checkout is not active. No payment provider has been confirmed or integrated.
 - Payment initialization, server-side payment verification, recurring billing, refunds, and webhook reconciliation remain outstanding.
-- Logo upload and validation are not yet available in the application.
+- Sponsor logo upload is now available in the administrator dashboard using the private `recognition-assets` bucket, PNG/JPEG/WebP validation and a 1 MB file limit. Sponsor placement controls are implemented but require testing.
 - Sponsor approval and donor recognition moderation are implemented as separate queues. Sponsor placements and public activation still require additional workflow and testing.
 - The optional download-time donation prompt has not been implemented.
 - Public recognition should not be treated as evidence of payment unless the verified donation record exists.
