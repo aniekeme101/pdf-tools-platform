@@ -1,119 +1,26 @@
 "use client";
-
-import { useCallback, useEffect, useState } from "react";
+import {useCallback,useEffect,useState} from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
-
-type Donation = { status: string; amount_minor: number; currency: string; paid_at: string | null };
-type DonorProfile = { email: string | null; donations?: Donation[] };
-type DonorRow = {
-  id: string; display_name: string | null; organisation_name: string | null; website_url: string | null;
-  consent_to_public_display: boolean; review_status: string; rejection_reason: string | null;
-  donors: DonorProfile | DonorProfile[] | null;
-};
-type SponsorRow = {
-  id: string; organisation_name: string; legal_name: string | null; website_url: string | null;
-  contact_name: string | null; contact_email: string | null; description: string | null;
-  status: string; public_display_consent: boolean; rejection_reason: string | null;
-};
-
-export default function SupporterAdminPage() {
-  const router = useRouter();
-  const [donors, setDonors] = useState<DonorRow[]>([]);
-  const [sponsors, setSponsors] = useState<SponsorRow[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [busy, setBusy] = useState("");
-  const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
-  const [reasons, setReasons] = useState<Record<string, string>>({});
-
-  const invoke = useCallback(async (action: string, extra: Record<string, unknown> = {}) => {
-    const supabase = createClient();
-    const { data: auth } = await supabase.auth.getUser();
-    if (!auth.user) { router.replace("/login"); throw new Error("Please sign in again."); }
-    const { data, error } = await supabase.functions.invoke("supporter-workflows", { body: { action, ...extra } });
-    if (error) throw error;
-    if (data?.error) throw new Error(data.error);
-    return data;
-  }, [router]);
-
-  const load = useCallback(async () => {
-    setLoading(true); setError("");
-    try {
-      const [d, s] = await Promise.all([invoke("admin_list_donors"), invoke("admin_list_sponsors")]);
-      setDonors(Array.isArray(d.data) ? d.data as DonorRow[] : []);
-      setSponsors(Array.isArray(s.data) ? s.data as SponsorRow[] : []);
-    } catch (e) { setError(e instanceof Error ? e.message : "Unable to load moderation queues."); }
-    finally { setLoading(false); }
-  }, [invoke]);
-
-  useEffect(() => { void load(); }, [load]);
-
-  async function act(key: string, action: string, payload: Record<string, unknown>) {
-    setBusy(key); setError(""); setNotice("");
-    try { const result = await invoke(action, payload); setNotice(result?.message || "Action completed."); await load(); }
-    catch (e) { setError(e instanceof Error ? e.message : "The action could not be completed."); }
-    finally { setBusy(""); }
-  }
-
-  return (
-    <main className="min-h-screen bg-gray-50 px-4 py-10 text-gray-900">
-      <div className="mx-auto max-w-6xl">
-        <header className="mb-8 flex flex-wrap items-center justify-between gap-4">
-          <div><Link href="/" className="text-xl font-bold">PaperFlow</Link><p className="mt-1 text-sm text-gray-500">Administrator · Supporter moderation</p></div>
-          <nav className="flex gap-4 text-sm"><Link href="/thank-you" className="text-blue-700 hover:underline">Public board</Link><Link href="/dashboard" className="text-blue-700 hover:underline">Dashboard</Link></nav>
-        </header>
-        <div className="mb-8 rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm leading-6 text-amber-950">Restricted moderation area. Donor recognition and commercial sponsorship are separate processes. Approval never unlocks premium features or changes access to tools.</div>
-        {notice && <p role="status" className="mb-5 rounded-xl bg-green-50 p-4 text-sm text-green-800">{notice}</p>}
-        {error && <p role="alert" className="mb-5 rounded-xl bg-red-50 p-4 text-sm text-red-800">{error}</p>}
-        {loading ? <p className="py-12 text-center text-gray-500">Loading moderation queues...</p> : (
-          <div className="space-y-12">
-            <section>
-              <div className="mb-5"><p className="text-xs font-semibold uppercase tracking-wider text-blue-700">Community supporters</p><h1 className="mt-1 text-2xl font-bold">Donor recognition requests</h1></div>
-              {!donors.length ? <p className="rounded-2xl border border-dashed border-gray-300 bg-white p-8 text-center text-sm text-gray-500">No donor recognition requests yet.</p> : <div className="grid gap-4 lg:grid-cols-2">
-                {donors.map(row => {
-                  const donor = Array.isArray(row.donors) ? row.donors[0] : row.donors;
-                  const payments = donor?.donations || [];
-                  const paid = payments.filter(p => p.status === "succeeded");
-                  return <article key={row.id} className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-                    <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="font-semibold">{row.display_name || row.organisation_name || "Unnamed supporter"}</h2><p className="mt-1 text-xs text-gray-500">{donor?.email || "No email"}</p></div><span className="rounded-full bg-gray-100 px-3 py-1 text-xs">{row.review_status}</span></div>
-                    {row.organisation_name && <p className="mt-2 text-sm">{row.organisation_name}</p>}
-                    {row.website_url && <a href={row.website_url} target="_blank" rel="noreferrer" className="mt-2 inline-block text-sm text-blue-700 hover:underline">Website</a>}
-                    <p className="mt-3 text-xs text-gray-600">Public consent: {row.consent_to_public_display ? "Yes" : "No"} · Successful donations: {paid.length}</p>
-                    <div className="mt-4 flex flex-wrap gap-2">
-                      <button disabled={!!busy} onClick={() => act(row.id, "admin_review_donor", { recognition_id: row.id, status: "approved", publish: false })} className="rounded-lg border border-gray-300 px-3 py-2 text-sm hover:bg-gray-50 disabled:opacity-50">Approve privately</button>
-                      <button disabled={!!busy || !row.consent_to_public_display || !paid.length} onClick={() => act(row.id, "admin_review_donor", { recognition_id: row.id, status: "approved", publish: true })} className="rounded-lg bg-blue-700 px-3 py-2 text-sm text-white hover:bg-blue-800 disabled:opacity-40">Approve & publish</button>
-                    </div>
-                    <div className="mt-4 flex gap-2"><input aria-label="Donor rejection reason" value={reasons[row.id] || ""} onChange={e => setReasons(v => ({ ...v, [row.id]: e.target.value }))} placeholder="Reason if rejecting" className="min-w-0 flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm" /><button disabled={!!busy || (reasons[row.id] || "").trim().length < 3} onClick={() => act(row.id, "admin_review_donor", { recognition_id: row.id, status: "rejected", rejection_reason: reasons[row.id] })} className="rounded-lg border border-red-300 px-3 py-2 text-sm text-red-700 disabled:opacity-40">Reject</button></div>
-                    {row.rejection_reason && <p className="mt-2 text-xs text-red-700">Previous reason: {row.rejection_reason}</p>}
-                  </article>;
-                })}
-              </div>}
-            </section>
-            <section>
-              <div className="mb-5"><p className="text-xs font-semibold uppercase tracking-wider text-blue-700">Commercial / organisational partners</p><h2 className="mt-1 text-2xl font-bold">Sponsor applications</h2></div>
-              {!sponsors.length ? <p className="rounded-2xl border border-dashed border-gray-300 bg-white p-8 text-center text-sm text-gray-500">No sponsor applications yet.</p> : <div className="grid gap-4 lg:grid-cols-2">
-                {sponsors.map(row => <article key={row.id} className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-                  <div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="font-semibold">{row.organisation_name}</h3><p className="mt-1 text-xs text-gray-500">{row.contact_name} · {row.contact_email}</p></div><span className="rounded-full bg-gray-100 px-3 py-1 text-xs">{row.status}</span></div>
-                  {row.legal_name && <p className="mt-2 text-sm text-gray-600">Legal name: {row.legal_name}</p>}
-                  {row.website_url && <a href={row.website_url} target="_blank" rel="noreferrer" className="mt-2 inline-block text-sm text-blue-700 hover:underline">Website</a>}
-                  {row.description && <p className="mt-3 text-sm leading-6 text-gray-600">{row.description}</p>}
-                  <p className="mt-3 text-xs text-gray-600">Public recognition consent: {row.public_display_consent ? "Yes" : "No"}</p>
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    <button disabled={!!busy} onClick={() => act(row.id, "admin_review_sponsor", { sponsor_id: row.id, status: "approved" })} className="rounded-lg bg-blue-700 px-3 py-2 text-sm text-white hover:bg-blue-800 disabled:opacity-50">Approve application</button>
-                    <button disabled={!!busy} onClick={() => act(row.id, "admin_review_sponsor", { sponsor_id: row.id, status: "paused" })} className="rounded-lg border border-gray-300 px-3 py-2 text-sm hover:bg-gray-50 disabled:opacity-50">Pause</button>
-                    <button disabled={!!busy || (reasons[row.id] || "").trim().length < 3} onClick={() => act(row.id, "admin_review_sponsor", { sponsor_id: row.id, status: "rejected", rejection_reason: reasons[row.id] })} className="rounded-lg border border-red-300 px-3 py-2 text-sm text-red-700 disabled:opacity-40">Reject</button>
-                  </div>
-                  <input aria-label="Sponsor rejection reason" value={reasons[row.id] || ""} onChange={e => setReasons(v => ({ ...v, [row.id]: e.target.value }))} placeholder="Reason if rejecting" className="mt-3 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" />
-                  {row.rejection_reason && <p className="mt-2 text-xs text-red-700">Previous reason: {row.rejection_reason}</p>}
-                </article>)}
-              </div>}
-            </section>
-          </div>
-        )}
-        <div className="mt-10 flex justify-end"><button onClick={() => void load()} className="rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-medium hover:bg-gray-50">Refresh queues</button></div>
-      </div>
-    </main>
-  );
+import {useRouter} from "next/navigation";
+import {createClient} from "@/lib/supabase/client";
+type Sponsor={id:string;organisation_name:string;website_url:string|null;contact_name:string|null;contact_email:string|null;description:string|null;status:string;public_display_consent:boolean;logo_storage_path:string|null;rejection_reason:string|null};
+type Placement={sponsor_id:string;placement_label:string|null;sort_order:number;is_active:boolean;starts_at:string|null;ends_at:string|null};
+export default function SupporterAdminPage(){
+ const router=useRouter();const [sponsors,setSponsors]=useState<Sponsor[]>([]);const [donors,setDonors]=useState<any[]>([]);const [placements,setPlacements]=useState<Record<string,Placement>>({});
+ const [loading,setLoading]=useState(true);const [busy,setBusy]=useState("");const [error,setError]=useState("");const [notice,setNotice]=useState("");const [reasons,setReasons]=useState<Record<string,string>>({});
+ const invoke=useCallback(async(action:string,extra:Record<string,unknown>={})=>{const supabase=createClient();const {data:auth}=await supabase.auth.getUser();if(!auth.user){router.replace("/login");throw new Error("Please sign in again.");}const {data,error}=await supabase.functions.invoke("supporter-workflows",{body:{action,...extra}});if(error)throw error;if(data?.error)throw new Error(data.error);return data;},[router]);
+ const load=useCallback(async()=>{setLoading(true);setError("");try{const [s,d,p]=await Promise.all([invoke("admin_list_sponsors"),invoke("admin_list_donors"),invoke("admin_list_sponsor_placements")]);setSponsors(s.data||[]);setDonors(d.data||[]);const map:Record<string,Placement>={};for(const x of p.data||[])map[x.sponsor_id]=x;setPlacements(map);}catch(e){setError(e instanceof Error?e.message:"Unable to load queues.");}finally{setLoading(false);}},[invoke]);
+ useEffect(()=>{void load();},[load]);
+ async function act(key:string,action:string,payload:Record<string,unknown>){setBusy(key);setError("");setNotice("");try{const r=await invoke(action,payload);setNotice(r.message||"Saved.");await load();}catch(e){setError(e instanceof Error?e.message:"Action failed.");}finally{setBusy("");}}
+ async function uploadLogo(s:Sponsor,file?:File){if(!file)return;if(!["image/png","image/jpeg","image/webp"].includes(file.type)||file.size>1048576){setError("Use PNG, JPEG or WebP files under 1 MB.");return;}setBusy(s.id);setError("");try{const supabase=createClient();const path="sponsors/"+s.id+"/"+crypto.randomUUID()+"."+({ "image/png":"png","image/jpeg":"jpg","image/webp":"webp"} as Record<string,string>)[file.type];const {error}=await supabase.storage.from("recognition-assets").upload(path,file,{contentType:file.type,upsert:false});if(error)throw error;await invoke("admin_set_sponsor_logo",{sponsor_id:s.id,logo_storage_path:path});setNotice("Logo uploaded and saved. It remains private unless the sponsor board publishes it.");await load();}catch(e){setError(e instanceof Error?e.message:"Logo upload failed.");}finally{setBusy("");}}
+ function placement(s:Sponsor){return placements[s.id]||{sponsor_id:s.id,placement_label:"Sponsor",sort_order:100,is_active:false,starts_at:null,ends_at:null};}
+ return <main className="min-h-screen bg-gray-50 px-4 py-10 text-gray-900"><div className="mx-auto max-w-6xl"><header className="mb-8 flex flex-wrap items-center justify-between gap-4"><div><Link href="/" className="text-xl font-bold">PaperFlow</Link><p className="mt-1 text-sm text-gray-500">Administrator · Supporter moderation</p></div><nav className="flex gap-4 text-sm"><Link href="/thank-you" className="text-blue-700 hover:underline">Public board</Link><Link href="/dashboard" className="text-blue-700 hover:underline">Dashboard</Link></nav></header>
+ <div className="mb-8 rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm leading-6 text-amber-950">Restricted moderation area. Sponsors and donors remain separate. All tools remain free.</div>{notice&&<p role="status" className="mb-5 rounded-xl bg-green-50 p-4 text-sm text-green-800">{notice}</p>}{error&&<p role="alert" className="mb-5 rounded-xl bg-red-50 p-4 text-sm text-red-800">{error}</p>}
+ {loading?<p className="py-12 text-center">Loading...</p>:<div className="space-y-12">
+ <section><h1 className="mb-5 text-2xl font-bold">Donor recognition requests</h1>{!donors.length?<p className="rounded-xl border bg-white p-6">No requests.</p>:<div className="grid gap-4 lg:grid-cols-2">{donors.map((row:any)=>{const donor=Array.isArray(row.donors)?row.donors[0]:row.donors;const paid=(donor?.donations||[]).filter((x:any)=>x.status==="succeeded");return <article key={row.id} className="rounded-2xl border bg-white p-5"><h3 className="font-semibold">{row.display_name||row.organisation_name||"Supporter"}</h3><p className="text-sm text-gray-500">{donor?.email||""}</p><p className="mt-2 text-sm">Consent: {row.consent_to_public_display?"Yes":"No"} · successful donations: {paid.length}</p><div className="mt-3 flex flex-wrap gap-2"><button disabled={!!busy} onClick={()=>act(row.id,"admin_review_donor",{recognition_id:row.id,status:"approved",publish:false})} className="rounded-lg border px-3 py-2 text-sm">Approve privately</button><button disabled={!!busy||!row.consent_to_public_display||!paid.length} onClick={()=>act(row.id,"admin_review_donor",{recognition_id:row.id,status:"approved",publish:true})} className="rounded-lg bg-blue-700 px-3 py-2 text-sm text-white disabled:opacity-40">Approve & publish</button></div><div className="mt-3 flex gap-2"><input value={reasons[row.id]||""} onChange={e=>setReasons(v=>({...v,[row.id]:e.target.value}))} placeholder="Reason if rejecting" className="min-w-0 flex-1 rounded border px-3 py-2 text-sm"/><button disabled={!!busy||(reasons[row.id]||"").trim().length<3} onClick={()=>act(row.id,"admin_review_donor",{recognition_id:row.id,status:"rejected",rejection_reason:reasons[row.id]})} className="rounded-lg border border-red-300 px-3 text-red-700 disabled:opacity-40">Reject</button></div></article>;})}</div>}</section>
+ <section><h2 className="mb-5 text-2xl font-bold">Sponsors & placements</h2>{!sponsors.length?<p className="rounded-xl border bg-white p-6">No applications.</p>:<div className="grid gap-4 lg:grid-cols-2">{sponsors.map(s=><article key={s.id} className="rounded-2xl border bg-white p-5"><div className="flex justify-between gap-3"><h3 className="font-semibold">{s.organisation_name}</h3><span className="rounded bg-gray-100 px-2 py-1 text-xs">{s.status}</span></div><p className="mt-1 text-sm text-gray-500">{s.contact_name} · {s.contact_email}</p>{s.website_url&&<a href={s.website_url} target="_blank" rel="noreferrer" className="mt-2 inline-block text-sm text-blue-700">Website</a>}{s.description&&<p className="mt-3 text-sm text-gray-600">{s.description}</p>}<p className="mt-2 text-xs">Public consent: {s.public_display_consent?"Yes":"No"} · logo: {s.logo_storage_path?"uploaded":"none"}</p>
+ <div className="mt-4 flex flex-wrap gap-2"><button disabled={!!busy} onClick={()=>act(s.id,"admin_review_sponsor",{sponsor_id:s.id,status:"approved"})} className="rounded-lg bg-blue-700 px-3 py-2 text-sm text-white">Approve</button><button disabled={!!busy} onClick={()=>act(s.id,"admin_review_sponsor",{sponsor_id:s.id,status:"paused"})} className="rounded-lg border px-3 py-2 text-sm">Pause</button><button disabled={!!busy||(reasons[s.id]||"").trim().length<3} onClick={()=>act(s.id,"admin_review_sponsor",{sponsor_id:s.id,status:"rejected",rejection_reason:reasons[s.id]})} className="rounded-lg border border-red-300 px-3 py-2 text-sm text-red-700">Reject</button></div><input value={reasons[s.id]||""} onChange={e=>setReasons(v=>({...v,[s.id]:e.target.value}))} placeholder="Reason if rejecting" className="mt-3 w-full rounded border px-3 py-2 text-sm"/>
+ <label className="mt-4 block text-sm font-medium">Sponsor logo (PNG, JPEG, WebP; max 1 MB)<input type="file" accept="image/png,image/jpeg,image/webp" disabled={!!busy} onChange={e=>void uploadLogo(s,e.target.files?.[0])} className="mt-2 block w-full text-sm"/></label>
+ <div className="mt-4 rounded-xl bg-gray-50 p-4"><h4 className="font-medium">Public placement</h4><label className="mt-3 block text-sm">Display label<input value={placement(s).placement_label||""} onChange={e=>setPlacements(v=>({...v,[s.id]:{...placement(s),placement_label:e.target.value}}))} className="mt-1 w-full rounded border px-3 py-2"/></label><label className="mt-3 block text-sm">Sort order<input type="number" min="0" max="10000" value={placement(s).sort_order} onChange={e=>setPlacements(v=>({...v,[s.id]:{...placement(s),sort_order:Number(e.target.value)}}))} className="mt-1 w-full rounded border px-3 py-2"/></label><label className="mt-3 flex items-center gap-2 text-sm"><input type="checkbox" checked={placement(s).is_active} onChange={e=>setPlacements(v=>({...v,[s.id]:{...placement(s),is_active:e.target.checked}}))}/>Active on public board</label><button disabled={!!busy} onClick={()=>act(s.id,"admin_set_sponsor_placement",placement(s))} className="mt-3 rounded-lg bg-gray-900 px-3 py-2 text-sm text-white disabled:opacity-50">Save placement</button><p className="mt-2 text-xs text-gray-500">Activation requires approval and explicit public display consent.</p></div></article>)}</div>}</section></div>}
+ <div className="mt-10 flex justify-end"><button onClick={()=>void load()} className="rounded-xl border bg-white px-4 py-2 text-sm">Refresh queues</button></div></div></main>;
 }
