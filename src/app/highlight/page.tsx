@@ -54,9 +54,9 @@ export default function HighlightPage() {
     const pdf = pdfRef.current;
     pdfRef.current = null;
 
-    if (pdf && typeof (pdf as unknown as { destroy?: () => Promise<void> }).destroy === "function") {
+    if (pdf) {
       try {
-        await (pdf as unknown as { destroy: () => Promise<void> }).destroy();
+        pdf.cleanup();
       } catch {
         // Ignore cleanup errors.
       }
@@ -76,8 +76,12 @@ export default function HighlightPage() {
       }
 
       const pdf = pdfRef.current;
-      if (pdf && typeof (pdf as unknown as { destroy?: () => Promise<void> }).destroy === "function") {
-        void (pdf as unknown as { destroy: () => Promise<void> }).destroy().catch(() => {});
+      if (pdf) {
+        try {
+          pdf.cleanup();
+        } catch {
+          // Ignore cleanup errors.
+        }
       }
     };
   }, []);
