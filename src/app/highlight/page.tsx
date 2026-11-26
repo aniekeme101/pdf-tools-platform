@@ -54,9 +54,9 @@ export default function HighlightPage() {
     const pdf = pdfRef.current;
     pdfRef.current = null;
 
-    if (pdf && typeof pdf.destroy === "function") {
+    if (pdf && typeof (pdf as unknown as { destroy?: () => Promise<void> }).destroy === "function") {
       try {
-        await pdf.destroy();
+        await (pdf as unknown as { destroy: () => Promise<void> }).destroy();
       } catch {
         // Ignore cleanup errors.
       }
@@ -76,8 +76,8 @@ export default function HighlightPage() {
       }
 
       const pdf = pdfRef.current;
-      if (pdf && typeof pdf.destroy === "function") {
-        void pdf.destroy().catch(() => {});
+      if (pdf && typeof (pdf as unknown as { destroy?: () => Promise<void> }).destroy === "function") {
+        void (pdf as unknown as { destroy: () => Promise<void> }).destroy().catch(() => {});
       }
     };
   }, []);
@@ -126,6 +126,7 @@ export default function HighlightPage() {
         canvas.height = Math.ceil(viewport.height);
 
         const task = page.render({
+          canvas,
           canvasContext: context,
           viewport,
         });
