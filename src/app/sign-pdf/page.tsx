@@ -188,6 +188,7 @@ export default function SignPDFPage() {
          * around the canvas rendering context.
          */
         const renderParameters: Parameters<typeof page.render>[0] = {
+          canvas,
           canvasContext: context,
           viewport,
         };
